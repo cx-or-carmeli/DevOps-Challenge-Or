@@ -310,8 +310,8 @@ deploy_traefik() {
     
     helm uninstall traefik 2>/dev/null || true
     
-    echo -e "${YELLOW}Installing Traefik CRDs...${NC}"
-    kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml || true
+    # echo -e "${YELLOW}Installing Traefik CRDs...${NC}"
+    # kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml || true
     
     echo -e "${YELLOW}Waiting for CRDs to register...${NC}"
     sleep 10
