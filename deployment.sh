@@ -165,7 +165,7 @@ EOF
     echo -e "${YELLOW}Deploying Prometheus with LoadBalancer service...${NC}"
     helm upgrade --install prometheus prometheus-community/prometheus \
         --set server.service.type=LoadBalancer \
-        --set server.service.port=9090 \
+        --set server.service.servicePort=9090 \
         --set server.global.scrape_interval=15s \
         --set server.global.evaluation_interval=15s \
         --set server.persistentVolume.size=4Gi \
@@ -323,7 +323,7 @@ deploy_traefik() {
       --set ports.web.port=80 \
       --set ports.websecure.port=443 \
       --set ports.traefik.port=9000 \
-      --set additionalArguments="{--api.dashboard=true,--providers.kubernetesingress.ingressclass=traefik,--providers.kubernetesingress=true}" \
+      --set additionalArguments="{--api.dashboard=true,--providers.kubernetesingress.ingressclass=traefik,--providers.kubernetesingress=true,--providers.kubernetescrd.namespaces=default}" \
       --set providers.kubernetesIngress.enabled=true \
       --set providers.kubernetesCRD.enabled=true
     
@@ -636,7 +636,7 @@ install() {
     deploy_prometheus
     deploy_traefik
     deploy_grafana
-    create_ingress_routes
+    apply_ingress_routes
     apply_k8s_resources
     display_access_info
 }
