@@ -158,9 +158,19 @@ data:
 EOF
     
     # Deploy Prometheus with LoadBalancer service to use with ingress
+    # Check if we're using Docker driver on macOS
+    if [ "$(minikube config get driver)" = "docker" ]; then
+        SERVICE_TYPE="NodePort"
+        NODE_PORT_OPTION="--set server.service.nodePort=30090"
+    else
+        SERVICE_TYPE="LoadBalancer"
+        NODE_PORT_OPTION=""
+    fi
+    
     helm upgrade --install prometheus prometheus-community/prometheus \
-        --set server.service.type=LoadBalancer \
+        --set server.service.type=${SERVICE_TYPE} \
         --set server.service.port=9090 \
+        ${NODE_PORT_OPTION} \
         --set server.global.scrape_interval=15s \
         --set server.global.evaluation_interval=15s \
         --set server.persistentVolume.size=4Gi \
@@ -238,7 +248,8 @@ controller:
     limits:
       cpu: "1"
       memory: "2Gi"
-  serviceType: LoadBalancer
+  serviceType: NodePort
+  nodePort: 30080
   initializeOnce: true
   probes:
     startupProbe:
@@ -314,11 +325,14 @@ deploy_traefik() {
     helm install traefik traefik/traefik \
       --set ingressClass.enabled=true \
       --set ingressRoute.dashboard.enabled=true \
-      --set dashboard.enabled=true \
-      --set service.type=LoadBalancer \
-      --set ports.web.port=8080 \
-      --set ports.websecure.port=8443 \
-      --set additionalArguments="{--providers.kubernetesingress.ingressclass=traefik,--providers.kubernetesingress=true}" \
+      --set service.type=NodePort \
+      --set ports.web.port=80 \
+      --set ports.web.nodePort=31080 \
+      --set ports.websecure.port=443 \
+      --set ports.websecure.nodePort=31443 \
+      --set ports.traefik.port=9000 \
+      --set ports.traefik.nodePort=31900 \
+      --set additionalArguments="{--api.dashboard=true,--providers.kubernetesingress.ingressclass=traefik,--providers.kubernetesingress=true}" \
       --set providers.kubernetesIngress.enabled=true \
       --set providers.kubernetesCRD.enabled=true
     
@@ -345,100 +359,8 @@ deploy_traefik() {
     echo -e "${GREEN}Traefik deployed successfully.${NC}"
 }
 
-create_ingress_routes() {
-    echo -e "${YELLOW}Creating ingress routes for services...${NC}"
-    
-    if ! kubectl get crd | grep -q ingressroutes.traefik.containo.us; then
-        echo -e "${RED}Traefik IngressRoute CRDs not found. Installing...${NC}"
-        kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
-        echo -e "${YELLOW}Waiting for CRDs to register...${NC}"
-        sleep 15
-    fi
-    
-    cat <<EOF > jenkins-ingress.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: jenkins-ingress
-  namespace: default
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(\`jenkins.local\`)
-      kind: Rule
-      services:
-        - name: jenkins
-          port: 8080
-EOF
-
-    cat <<EOF > grafana-ingress.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: grafana-ingress
-  namespace: default
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(\`grafana.local\`)
-      kind: Rule
-      services:
-        - name: grafana
-          port: 3000
-EOF
-
-    cat <<EOF > prometheus-ingress.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: prometheus-ingress
-  namespace: default
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(\`prometheus.local\`)
-      kind: Rule
-      services:
-        - name: prometheus-server
-          port: 9090
-EOF
-
-    echo -e "${YELLOW}Applying Jenkins ingress route...${NC}"
-    kubectl apply -f jenkins-ingress.yaml || echo -e "${RED}Failed to apply Jenkins ingress route${NC}"
-    
-    echo -e "${YELLOW}Applying Grafana ingress route...${NC}"
-    kubectl apply -f grafana-ingress.yaml || echo -e "${RED}Failed to apply Grafana ingress route${NC}"
-    
-    echo -e "${YELLOW}Applying Prometheus ingress route...${NC}"
-    kubectl apply -f prometheus-ingress.yaml || echo -e "${RED}Failed to apply Prometheus ingress route${NC}"
-    
-    echo -e "${YELLOW}Adding local hosts entries...${NC}"
-    MINIKUBE_IP=$(minikube ip)
-    
-    echo -e "${YELLOW}Add the following entries to your /etc/hosts file:${NC}"
-    echo -e "${YELLOW}127.0.0.1 jenkins.local grafana.local prometheus.local${NC}"
-    
-    echo -e "${YELLOW}Then access services at:${NC}"
-    echo -e "${YELLOW}http://jenkins.local:8080${NC}"
-    echo -e "${YELLOW}http://grafana.local:8080${NC}"
-    echo -e "${YELLOW}http://prometheus.local:8080${NC}"
-    
-    if [ "$EUID" -eq 0 ]; then
-        echo -e "${YELLOW}Adding entries to /etc/hosts automatically...${NC}"
-        if ! grep -q "jenkins.local" /etc/hosts; then
-            echo "127.0.0.1 jenkins.local grafana.local prometheus.local" >> /etc/hosts
-        fi
-    else
-        echo -e "${RED}Please run the following command manually with sudo:${NC}"
-        echo -e "${RED}sudo sh -c \"echo '127.0.0.1 jenkins.local grafana.local prometheus.local' >> /etc/hosts\"${NC}"
-    fi
-    
-    echo -e "${GREEN}Ingress routes created successfully.${NC}"
-    echo -e "${YELLOW}IMPORTANT: Make sure to run 'minikube tunnel' in a separate terminal window!${NC}"
-}
+# Note: The duplicate create_ingress_routes function has been removed.
+# The newer version of this function is kept at lines 574-677.
 
 # Deploy Grafana using Helm
 deploy_grafana() {
@@ -449,9 +371,19 @@ deploy_grafana() {
     helm repo update
     
     # Deploy Grafana with LoadBalancer to use with ingress
+    # Check if we're using Docker driver on macOS
+    if [ "$(minikube config get driver)" = "docker" ]; then
+        SERVICE_TYPE="NodePort"
+        NODE_PORT_OPTION="--set service.nodePort=30300"
+    else
+        SERVICE_TYPE="LoadBalancer"
+        NODE_PORT_OPTION=""
+    fi
+    
     helm upgrade --install grafana grafana/grafana \
-        --set service.type=LoadBalancer \
+        --set service.type=${SERVICE_TYPE} \
         --set service.port=3000 \
+        ${NODE_PORT_OPTION} \
         --set persistence.enabled=true \
         --set persistence.size=1Gi \
         --set adminPassword=admin \
@@ -643,19 +575,27 @@ EOF
     MINIKUBE_IP=$(minikube ip)
     
     echo -e "${YELLOW}Add the following entries to your /etc/hosts file:${NC}"
-    echo -e "${YELLOW}${MINIKUBE_IP} jenkins.local grafana.local prometheus.local${NC}"
+    # For Docker driver on macOS, we need to use 127.0.0.1 instead of Minikube IP
+    if [ "$(minikube config get driver)" = "docker" ]; then
+        HOST_IP="127.0.0.1"
+        echo -e "${YELLOW}Detected Docker driver on macOS. Using localhost (127.0.0.1) for host entries.${NC}"
+    else
+        HOST_IP="${MINIKUBE_IP}"
+    fi
+    
+    echo -e "${YELLOW}Add the following entries to your /etc/hosts file:${NC}"
+    echo -e "${YELLOW}${HOST_IP} jenkins.local grafana.local prometheus.local${NC}"
     
     # Optionally, you can automatically add to /etc/hosts if running with sudo
     if [ "$EUID" -eq 0 ]; then
         echo -e "${YELLOW}Adding entries to /etc/hosts automatically...${NC}"
         if ! grep -q "jenkins.local" /etc/hosts; then
-            echo "${MINIKUBE_IP} jenkins.local grafana.local prometheus.local" >> /etc/hosts
+            echo "${HOST_IP} jenkins.local grafana.local prometheus.local" >> /etc/hosts
         fi
     else
         echo -e "${RED}Please run the following command manually with sudo:${NC}"
-        echo -e "${RED}sudo sh -c \"echo '${MINIKUBE_IP} jenkins.local grafana.local prometheus.local' >> /etc/hosts\"${NC}"
+        echo -e "${RED}sudo sh -c \"echo '${HOST_IP} jenkins.local grafana.local prometheus.local' >> /etc/hosts\"${NC}"
     fi
-    
     echo -e "${GREEN}Ingress routes created successfully.${NC}"
 }
 
@@ -666,29 +606,75 @@ display_access_info() {
     # Get Minikube IP
     MINIKUBE_IP=$(minikube ip)
     
-    echo -e "${YELLOW}Important: To access services, run 'minikube tunnel' in a separate terminal.${NC}"
-    echo -e "${YELLOW}The tunnel command may require your administrator password.${NC}"
-    echo -e "${YELLOW}Keep the tunnel running while you access the services.${NC}"
-    echo -e "\n"
-    
-    # Wait for LoadBalancer IP
-    echo -e "${YELLOW}Waiting for Traefik LoadBalancer IP to be assigned...${NC}"
-    sleep 10
-    
-    # Get Traefik LoadBalancer IP
-    TRAEFIK_IP=$(kubectl get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
-    
-    # If no IP yet, use localhost since tunnel will forward to 127.0.0.1
-    if [ -z "$TRAEFIK_IP" ]; then
+    # Check if we're using Docker driver
+    # Check if we're using Docker driver
+    if [ "$(minikube config get driver)" = "docker" ]; then
+        echo -e "${YELLOW}Important: For Docker driver on macOS, you need to access services through port forwarding.${NC}"
+        echo -e "${YELLOW}You can access the services in one of these ways:${NC}"
+        echo -e "${YELLOW}1. Using the port forwarding setup automatically below${NC}"
+        echo -e "${YELLOW}2. Using 'minikube service SERVICE_NAME --url' in a separate terminal${NC}"
+        
+        # Kill any existing port forwarding processes
+        pkill -f "kubectl port-forward" || true
+        # Start port forwarding for each service in the background
+        kubectl port-forward svc/jenkins 8080:8080 > /dev/null 2>&1 &
+        echo -e "${GREEN}Started port forwarding for Jenkins on port 8080${NC}"
+        
+        kubectl port-forward svc/grafana 3000:3000 > /dev/null 2>&1 &
+        echo -e "${GREEN}Started port forwarding for Grafana on port 3000${NC}"
+        
+        kubectl port-forward svc/prometheus-server 9090:80 > /dev/null 2>&1 &
+        echo -e "${GREEN}Started port forwarding for Prometheus on port 9090${NC}"
+        
+        kubectl port-forward svc/traefik 9000:9000 > /dev/null 2>&1 &
+        echo -e "${GREEN}Started port forwarding for Traefik dashboard on port 9000${NC}"
+        
+        # Use localhost for all services
         TRAEFIK_IP="127.0.0.1"
+    else
+        echo -e "${YELLOW}Important: To access services, run 'minikube tunnel' in a separate terminal.${NC}"
+        echo -e "${YELLOW}The tunnel command may require your administrator password.${NC}"
+        echo -e "${YELLOW}Keep the tunnel running while you access the services.${NC}"
+        echo -e "\n"
+        
+        # Wait for LoadBalancer IP
+        echo -e "${YELLOW}Waiting for Traefik LoadBalancer IP to be assigned...${NC}"
+        sleep 10
+        
+        # Get Traefik LoadBalancer IP
+        TRAEFIK_IP=$(kubectl get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+        
+        # If no IP yet, use localhost since tunnel will forward to 127.0.0.1
+        if [ -z "$TRAEFIK_IP" ]; then
+            TRAEFIK_IP="127.0.0.1"
+        fi
     fi
     
     # Add information about ingress routes
-    echo -e "${GREEN}Access your services via Ingress:${NC}"
-    echo -e "${GREEN}Jenkins: http://jenkins.local/${NC}"
-    echo -e "${GREEN}Grafana: http://grafana.local/${NC}"
-    echo -e "${GREEN}Prometheus: http://prometheus.local/${NC}"
-    echo -e "${GREEN}Traefik Dashboard: http://${TRAEFIK_IP}/dashboard/${NC}"
+    if [ "$(minikube config get driver)" = "docker" ]; then
+        echo -e "${GREEN}Access your services via direct port forwarding:${NC}"
+        echo -e "${GREEN}Jenkins: http://localhost:8080${NC}"
+        echo -e "${GREEN}Grafana: http://localhost:3000${NC}"
+        echo -e "${GREEN}Prometheus: http://localhost:9090${NC}"
+        echo -e "${GREEN}Traefik Dashboard: http://localhost:9000/dashboard/${NC}"
+        
+        echo -e "${GREEN}Or via minikube service URLs (run these commands in a new terminal):${NC}"
+        echo -e "${GREEN}Jenkins: minikube service jenkins --url${NC}"
+        echo -e "${GREEN}Grafana: minikube service grafana --url${NC}"
+        echo -e "${GREEN}Prometheus: minikube service prometheus-server --url${NC}"
+        echo -e "${GREEN}Traefik: minikube service traefik --url${NC}"
+        
+        echo -e "${GREEN}Or via hostname entries (if you've added them to /etc/hosts):${NC}"
+        echo -e "${GREEN}Jenkins: http://jenkins.local:8080${NC}"
+        echo -e "${GREEN}Grafana: http://grafana.local:3000${NC}"
+        echo -e "${GREEN}Prometheus: http://prometheus.local:9090${NC}"
+    else
+        echo -e "${GREEN}Access your services via Ingress:${NC}"
+        echo -e "${GREEN}Jenkins: http://jenkins.local/${NC}"
+        echo -e "${GREEN}Grafana: http://grafana.local/${NC}"
+        echo -e "${GREEN}Prometheus: http://prometheus.local/${NC}"
+        echo -e "${GREEN}Traefik Dashboard: http://${TRAEFIK_IP}/dashboard/${NC}"
+    fi
     
     echo -e "${YELLOW}Jenkins Admin Credentials:${NC}"
     echo -e "${YELLOW}Username: admin${NC}"
@@ -709,6 +695,9 @@ uninstall() {
     
     # Kill any running minikube tunnel
     pkill -f "minikube tunnel" || true
+    
+    # Kill any port forwarding processes
+    pkill -f "kubectl port-forward" || true
     
     # Delete all ingress resources first
     echo -e "${YELLOW}Removing ingress routes...${NC}"

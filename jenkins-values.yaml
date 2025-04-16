@@ -24,7 +24,8 @@ controller:
     limits:
       cpu: "1"
       memory: "2Gi"
-  serviceType: LoadBalancer
+  serviceType: NodePort
+  nodePort: 30080
   initializeOnce: true
   probes:
     startupProbe:
