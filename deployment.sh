@@ -7,6 +7,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' 
+ 
 
 # check if required tools are installed
 check_prerequisites() {
@@ -46,6 +47,9 @@ check_prerequisites() {
 
     echo -e "${GREEN}✔ All prerequisites are installed.${NC}"
 }
+
+# TODO: add step for start docker application for mac
+# TODO: .gitignore for creds
 
 # start minikube
 start_minikube() {
@@ -183,7 +187,7 @@ EOF
 
 # deploy jenkins
 deploy_jenkins() {
-    echo -e "${YELLOW}Deploying Jenkins...${NC}"
+    echo -e "${YELLOW}Deploying Jenkins...${NC}"§
     
     # Add jenkins repo if not already added
     helm repo add jenkins https://charts.jenkins.io 2>/dev/null || true
@@ -470,71 +474,8 @@ apply_k8s_resources() {
 }
 
 # Create ingress routes for services
-create_ingress_routes() {
-    echo -e "${YELLOW}Creating ingress routes for services...${NC}"
-    
-    # Create jenkins-ingress.yaml file
-    cat <<EOF > jenkins-ingress.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: jenkins-ingress
-  namespace: default
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(\`jenkins.local\`)
-      kind: Rule
-      services:
-        - name: jenkins
-          port: 8080
-  # Enable TLS if needed
-  # tls:
-  #   secretName: jenkins-tls-cert
-EOF
-
-    # Create grafana-ingress.yaml file
-    cat <<EOF > grafana-ingress.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: grafana-ingress
-  namespace: default
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(\`grafana.local\`)
-      kind: Rule
-      services:
-        - name: grafana
-          port: 3000
-  # Enable TLS if needed
-  # tls:
-  #   secretName: grafana-tls-cert
-EOF
-
-    # Create prometheus-ingress.yaml file
-    cat <<EOF > prometheus-ingress.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: prometheus-ingress
-  namespace: default
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(\`prometheus.local\`)
-      kind: Rule
-      services:
-        - name: prometheus-server
-          port: 9090
-  # Enable TLS if needed
-  # tls:
-  #   secretName: prometheus-tls-cert
-EOF
+apply_ingress_routes() {
+    echo -e "${YELLOW}Applying ingress routes for services...${NC}"
 
     # Apply ingress route for Jenkins
     kubectl apply -f jenkins-ingress.yaml
