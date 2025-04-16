@@ -313,19 +313,13 @@ deploy_traefik() {
     # echo -e "${YELLOW}Installing Traefik CRDs...${NC}"
     # kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml || true
     
-    echo -e "${YELLOW}Waiting for CRDs to register...${NC}"
-    sleep 10
-    
-    echo -e "${YELLOW}Installing Traefik with non-standard ports...${NC}"
+    echo -e "${YELLOW}Installing Traefik ...${NC}"
     helm install traefik traefik/traefik \
-      --set ports.web.hostport=80 \
-      --set ports.web.containerPort=8000 \
-      --set ports.web.protocol=TCP \
-      --set service.type=ClusterIP
+      --set ingress.enabled=true
 
     
     echo -e "${YELLOW}Waiting for Traefik to be ready...${NC}"
-    kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=traefik --timeout=300s || true
+    kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=traefi k --timeout=300s || true
     
     # echo -e "${YELLOW}Verifying Traefik CRDs...${NC}"
     # if ! kubectl get crd | grep -q ingressroutes.traefik.containo.us; then
