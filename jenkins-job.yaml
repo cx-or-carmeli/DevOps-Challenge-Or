@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-job-dsl
+data:
+  job-dsl.groovy: |
+    job('db-timestamp-job') {
+      description('Job to record timestamps in PostgreSQL database every 5 minutes')
+      
+      triggers {
+        cron('*/5 * * * *')
+      }
+      
+      steps {
+        shell('''
+          #!/bin/bash
+          CURRENT_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+          echo "Recording timestamp: $CURRENT_TIME"
+          
+          # Create table if not exists and insert timestamp
+          PGPASSWORD="${POSTGRES_PASSWORD}" psql -h postgres-postgresql -U postgres -c "
+            CREATE TABLE IF NOT EXISTS timestamps (
+              id SERIAL PRIMARY KEY,
+              recorded_at TIMESTAMP NOT NULL,
+              pod_name TEXT,
+              node_name TEXT
+            );
+            
+            INSERT INTO timestamps (recorded_at, pod_name, node_name) 
+            VALUES ('$CURRENT_TIME', '$HOSTNAME', '${NODE_NAME}');
+          "
+          
+          echo "Timestamp recorded successfully"
+        ''')
+      }
+      
+      wrappers {
+        credentialsBinding {
+          string('POSTGRES_PASSWORD', 'postgres-secret')
+        }
+        environmentVariables {
+          env('NODE_NAME', '${NODE_NAME}')
+        }
+      }
+      
+      label('jenkins-agent')
+    }

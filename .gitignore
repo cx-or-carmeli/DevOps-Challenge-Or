@@ -1,0 +1,68 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE Files
+.idea/
+.vscode/
+*.sublime-*
+.project
+.classpath
+.settings/
+
+# Build and Dependency Directories
+node_modules/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+dist/
+build/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terragrunt-cache/
+terraform.tfvars
+terraform.tfplan
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Secrets and Credentials
+credentials.txt
+*.pem
+*.key
+*.pub
+*.crt
+*.p12
+*.pfx
+*.jks
+.env
+*.env
+secrets/
+
+# Logs
+*.log
+logs/
+
+# Minikube
+.minikube/
+
+# Package files
+*.tgz
+*.tar.gz
+*.zip
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Project-specific
+*.retry

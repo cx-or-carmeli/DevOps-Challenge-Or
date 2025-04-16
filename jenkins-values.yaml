@@ -1,0 +1,58 @@
+controller:
+  admin:
+    username: admin
+    existingSecret: jenkins-secret
+    passwordKey: jenkins-admin-password
+    userKey: jenkins-admin-user
+  installPlugins: false
+  additionalPlugins:
+    - kubernetes:4150.v1fa_200642586
+    - workflow-aggregator:596.v8c21c963d92d
+    - git:5.2.1
+  JCasC:
+    enabled: false
+    configScripts: {}
+  # Remove the custom init container and rely on fsGroup instead
+  containerSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    allowPrivilegeEscalation: false
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+  serviceType: ClusterIP
+  initializeOnce: true
+  probes:
+    startupProbe:
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 12
+    livenessProbe:
+      periodSeconds: 20
+      timeoutSeconds: 10
+      failureThreshold: 5
+  numExecutors: 0
+  imagePullPolicy: IfNotPresent
+persistence:
+  existingClaim: jenkins-pvc
+  # Add fsGroup to set permissions properly
+  runAsUser: 1000
+  fsGroup: 1000
+agent:
+  enabled: true
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+# Add pod security context to make the pod run as non-root
+podSecurityContextOverride:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000

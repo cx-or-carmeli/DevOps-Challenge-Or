@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-config
+data:
+  jenkins-casc.yaml: |
+    jenkins:
+      systemMessage: "Jenkins configured for Kubernetes demo"
+      clouds:
+        - kubernetes:
+            name: "kubernetes"
+            serverUrl: "https://kubernetes.default.svc.cluster.local"
+            namespace: "default"
+            jenkinsUrl: "http://jenkins:8080"
+            connectTimeout: 5
+            readTimeout: 15
+            containerCapStr: "10"
+            maxRequestsPerHostStr: "32"
+            retentionTimeout: 5
+            templates:
+              - name: "jenkins-agent"
+                namespace: "default"
+                label: "jenkins-agent"
+                nodeUsageMode: "NORMAL"
+                containers:
+                  - name: "jnlp"
+                    image: "jenkins/inbound-agent:latest"
+                    alwaysPullImage: false
+                    workingDir: "/home/jenkins/agent"
+                    ttyEnabled: true
+                    resourceRequestCpu: "500m"
+                    resourceRequestMemory: "512Mi"
+                    resourceLimitCpu: "1000m"
+                    resourceLimitMemory: "1Gi"
+                idleMinutes: 0
+                instanceCap: 5
+                volumes:
+                  - hostPathVolume:
+                      hostPath: "/var/run/docker.sock"
+                      mountPath: "/var/run/docker.sock"
+    jobs:
+      - script: |
+          job('db-timestamp-job') {
+            triggers {
+                cron('*/5 * * * *')
+            }
+            steps {
+                shell('''
+                  #!/bin/bash
+                  POSTGRES_PASSWORD=$(cat /etc/postgres-secret/postgres-password)
+                  CURRENT_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+                  
+                  echo "Connecting to PostgreSQL..."
+                  PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres-postgresql -U postgres -c "
+                    CREATE TABLE IF NOT EXISTS timestamps (
+                        id SERIAL PRIMARY KEY,
+                        recorded_at TIMESTAMP NOT NULL,
+                        pod_name TEXT,
+                        node_name TEXT
+                    );
+                    INSERT INTO timestamps (recorded_at, pod_name, node_name) 
+                    VALUES ('$CURRENT_TIME', '$HOSTNAME', '$NODE_NAME');
+                  "
+                  echo "Timestamp recorded successfully: $CURRENT_TIME"
+                ''')
+            }
+            wrappers {
+                credentialsBinding {
+                    file('POSTGRES_PASSWORD', 'postgres-secret')
+                }
+            }
+            label('jenkins-agent')
+          }
+  plugins.txt: |
+    kubernetes:1.31.3
+    workflow-aggregator:2.6
+    git:4.11.0
+    ssh-slaves:1.33.0
+    job-dsl:1.77
+    configuration-as-code:1.55
+    blueocean:1.25.3
