@@ -63,7 +63,7 @@ start_minikube() {
         minikube addons enable ingress
     fi
     
-    # Set docker env to use minikube's docker daemon
+    # set docker env to use minikube's docker daemon
     echo -e "${YELLOW}Setting docker environment to minikube...${NC}"
     eval $(minikube docker-env)
     
@@ -157,9 +157,9 @@ data:
           target_label: kubernetes_pod_name
 EOF
     
-    # Deploy Prometheus with ClusterIP service to use with ingress
+    # Deploy Prometheus with LoadBalancer service to use with ingress
     helm upgrade --install prometheus prometheus-community/prometheus \
-        --set server.service.type=ClusterIP \
+        --set server.service.type=LoadBalancer \
         --set server.service.port=9090 \
         --set server.global.scrape_interval=15s \
         --set server.global.evaluation_interval=15s \
@@ -238,7 +238,7 @@ controller:
     limits:
       cpu: "1"
       memory: "2Gi"
-  serviceType: ClusterIP
+  serviceType: LoadBalancer
   initializeOnce: true
   probes:
     startupProbe:
@@ -442,9 +442,9 @@ deploy_grafana() {
     helm repo add grafana https://grafana.github.io/helm-charts 2>/dev/null || true
     helm repo update
     
-    # Deploy Grafana with ClusterIP to use with ingress
+    # Deploy Grafana with LoadBalancer to use with ingress
     helm upgrade --install grafana grafana/grafana \
-        --set service.type=ClusterIP \
+        --set service.type=LoadBalancer \
         --set service.port=3000 \
         --set persistence.enabled=true \
         --set persistence.size=1Gi \
@@ -772,7 +772,6 @@ case "$1" in
     *)
         echo "Usage: $0 install|uninstall"
         exit 1
-        ;;
 esac
 
 exit 0
