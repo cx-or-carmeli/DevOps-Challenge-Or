@@ -157,20 +157,11 @@ data:
           target_label: kubernetes_pod_name
 EOF
     
-    # Deploy Prometheus with LoadBalancer service to use with ingress
-    # Check if we're using Docker driver on macOS
-    if [ "$(minikube config get driver)" = "docker" ]; then
-        SERVICE_TYPE="NodePort"
-        NODE_PORT_OPTION="--set server.service.nodePort=30090"
-    else
-        SERVICE_TYPE="LoadBalancer"
-        NODE_PORT_OPTION=""
-    fi
-    
+    # Deploy Prometheus with LoadBalancer service type
+    echo -e "${YELLOW}Deploying Prometheus with LoadBalancer service...${NC}"
     helm upgrade --install prometheus prometheus-community/prometheus \
-        --set server.service.type=${SERVICE_TYPE} \
+        --set server.service.type=LoadBalancer \
         --set server.service.port=9090 \
-        ${NODE_PORT_OPTION} \
         --set server.global.scrape_interval=15s \
         --set server.global.evaluation_interval=15s \
         --set server.persistentVolume.size=4Gi \
@@ -248,8 +239,7 @@ controller:
     limits:
       cpu: "1"
       memory: "2Gi"
-  serviceType: NodePort
-  nodePort: 30080
+  serviceType: LoadBalancer
   initializeOnce: true
   probes:
     startupProbe:
@@ -325,13 +315,10 @@ deploy_traefik() {
     helm install traefik traefik/traefik \
       --set ingressClass.enabled=true \
       --set ingressRoute.dashboard.enabled=true \
-      --set service.type=NodePort \
+      --set service.type=LoadBalancer \
       --set ports.web.port=80 \
-      --set ports.web.nodePort=31080 \
       --set ports.websecure.port=443 \
-      --set ports.websecure.nodePort=31443 \
       --set ports.traefik.port=9000 \
-      --set ports.traefik.nodePort=31900 \
       --set additionalArguments="{--api.dashboard=true,--providers.kubernetesingress.ingressclass=traefik,--providers.kubernetesingress=true}" \
       --set providers.kubernetesIngress.enabled=true \
       --set providers.kubernetesCRD.enabled=true
@@ -359,9 +346,6 @@ deploy_traefik() {
     echo -e "${GREEN}Traefik deployed successfully.${NC}"
 }
 
-# Note: The duplicate create_ingress_routes function has been removed.
-# The newer version of this function is kept at lines 574-677.
-
 # Deploy Grafana using Helm
 deploy_grafana() {
     echo -e "${YELLOW}Deploying Grafana...${NC}"
@@ -370,20 +354,11 @@ deploy_grafana() {
     helm repo add grafana https://grafana.github.io/helm-charts 2>/dev/null || true
     helm repo update
     
-    # Deploy Grafana with LoadBalancer to use with ingress
-    # Check if we're using Docker driver on macOS
-    if [ "$(minikube config get driver)" = "docker" ]; then
-        SERVICE_TYPE="NodePort"
-        NODE_PORT_OPTION="--set service.nodePort=30300"
-    else
-        SERVICE_TYPE="LoadBalancer"
-        NODE_PORT_OPTION=""
-    fi
-    
+    # Deploy Grafana with LoadBalancer service type
+    echo -e "${YELLOW}Deploying Grafana with LoadBalancer service...${NC}"
     helm upgrade --install grafana grafana/grafana \
-        --set service.type=${SERVICE_TYPE} \
+        --set service.type=LoadBalancer \
         --set service.port=3000 \
-        ${NODE_PORT_OPTION} \
         --set persistence.enabled=true \
         --set persistence.size=1Gi \
         --set adminPassword=admin \
@@ -575,13 +550,7 @@ EOF
     MINIKUBE_IP=$(minikube ip)
     
     echo -e "${YELLOW}Add the following entries to your /etc/hosts file:${NC}"
-    # For Docker driver on macOS, we need to use 127.0.0.1 instead of Minikube IP
-    if [ "$(minikube config get driver)" = "docker" ]; then
-        HOST_IP="127.0.0.1"
-        echo -e "${YELLOW}Detected Docker driver on macOS. Using localhost (127.0.0.1) for host entries.${NC}"
-    else
-        HOST_IP="${MINIKUBE_IP}"
-    fi
+    HOST_IP="${MINIKUBE_IP}"
     
     echo -e "${YELLOW}Add the following entries to your /etc/hosts file:${NC}"
     echo -e "${YELLOW}${HOST_IP} jenkins.local grafana.local prometheus.local${NC}"
@@ -606,75 +575,55 @@ display_access_info() {
     # Get Minikube IP
     MINIKUBE_IP=$(minikube ip)
     
-    # Check if we're using Docker driver
-    # Check if we're using Docker driver
-    if [ "$(minikube config get driver)" = "docker" ]; then
-        echo -e "${YELLOW}Important: For Docker driver on macOS, you need to access services through port forwarding.${NC}"
-        echo -e "${YELLOW}You can access the services in one of these ways:${NC}"
-        echo -e "${YELLOW}1. Using the port forwarding setup automatically below${NC}"
-        echo -e "${YELLOW}2. Using 'minikube service SERVICE_NAME --url' in a separate terminal${NC}"
-        
-        # Kill any existing port forwarding processes
-        pkill -f "kubectl port-forward" || true
-        # Start port forwarding for each service in the background
-        kubectl port-forward svc/jenkins 8080:8080 > /dev/null 2>&1 &
-        echo -e "${GREEN}Started port forwarding for Jenkins on port 8080${NC}"
-        
-        kubectl port-forward svc/grafana 3000:3000 > /dev/null 2>&1 &
-        echo -e "${GREEN}Started port forwarding for Grafana on port 3000${NC}"
-        
-        kubectl port-forward svc/prometheus-server 9090:80 > /dev/null 2>&1 &
-        echo -e "${GREEN}Started port forwarding for Prometheus on port 9090${NC}"
-        
-        kubectl port-forward svc/traefik 9000:9000 > /dev/null 2>&1 &
-        echo -e "${GREEN}Started port forwarding for Traefik dashboard on port 9000${NC}"
-        
-        # Use localhost for all services
-        TRAEFIK_IP="127.0.0.1"
+    echo -e "${YELLOW}Important: To access LoadBalancer services, run 'minikube tunnel' in a separate terminal.${NC}"
+    echo -e "${YELLOW}The tunnel command may require your administrator password.${NC}"
+    echo -e "${YELLOW}Keep the tunnel running while you access the services.${NC}"
+    echo -e "\n"
+    
+    # Wait for LoadBalancer IPs to be assigned
+    echo -e "${YELLOW}Waiting for LoadBalancer IPs to be assigned...${NC}"
+    sleep 10
+    
+    # Get LoadBalancer IPs
+    JENKINS_IP=$(kubectl get svc jenkins -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+    GRAFANA_IP=$(kubectl get svc grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+    PROMETHEUS_IP=$(kubectl get svc prometheus-server -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+    TRAEFIK_IP=$(kubectl get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+    
+    echo -e "${GREEN}Access your services via LoadBalancer IPs:${NC}"
+    
+    if [ -n "$JENKINS_IP" ]; then
+        echo -e "${GREEN}Jenkins: http://${JENKINS_IP}:8080${NC}"
     else
-        echo -e "${YELLOW}Important: To access services, run 'minikube tunnel' in a separate terminal.${NC}"
-        echo -e "${YELLOW}The tunnel command may require your administrator password.${NC}"
-        echo -e "${YELLOW}Keep the tunnel running while you access the services.${NC}"
-        echo -e "\n"
-        
-        # Wait for LoadBalancer IP
-        echo -e "${YELLOW}Waiting for Traefik LoadBalancer IP to be assigned...${NC}"
-        sleep 10
-        
-        # Get Traefik LoadBalancer IP
-        TRAEFIK_IP=$(kubectl get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
-        
-        # If no IP yet, use localhost since tunnel will forward to 127.0.0.1
-        if [ -z "$TRAEFIK_IP" ]; then
-            TRAEFIK_IP="127.0.0.1"
-        fi
+        echo -e "${YELLOW}Jenkins LoadBalancer IP not assigned yet.${NC}"
+        echo -e "${GREEN}After running 'minikube tunnel', Jenkins will be available at: http://127.0.0.1:8080${NC}"
     fi
     
-    # Add information about ingress routes
-    if [ "$(minikube config get driver)" = "docker" ]; then
-        echo -e "${GREEN}Access your services via direct port forwarding:${NC}"
-        echo -e "${GREEN}Jenkins: http://localhost:8080${NC}"
-        echo -e "${GREEN}Grafana: http://localhost:3000${NC}"
-        echo -e "${GREEN}Prometheus: http://localhost:9090${NC}"
-        echo -e "${GREEN}Traefik Dashboard: http://localhost:9000/dashboard/${NC}"
-        
-        echo -e "${GREEN}Or via minikube service URLs (run these commands in a new terminal):${NC}"
-        echo -e "${GREEN}Jenkins: minikube service jenkins --url${NC}"
-        echo -e "${GREEN}Grafana: minikube service grafana --url${NC}"
-        echo -e "${GREEN}Prometheus: minikube service prometheus-server --url${NC}"
-        echo -e "${GREEN}Traefik: minikube service traefik --url${NC}"
-        
-        echo -e "${GREEN}Or via hostname entries (if you've added them to /etc/hosts):${NC}"
-        echo -e "${GREEN}Jenkins: http://jenkins.local:8080${NC}"
-        echo -e "${GREEN}Grafana: http://grafana.local:3000${NC}"
-        echo -e "${GREEN}Prometheus: http://prometheus.local:9090${NC}"
+    if [ -n "$GRAFANA_IP" ]; then
+        echo -e "${GREEN}Grafana: http://${GRAFANA_IP}:3000${NC}"
     else
-        echo -e "${GREEN}Access your services via Ingress:${NC}"
-        echo -e "${GREEN}Jenkins: http://jenkins.local/${NC}"
-        echo -e "${GREEN}Grafana: http://grafana.local/${NC}"
-        echo -e "${GREEN}Prometheus: http://prometheus.local/${NC}"
-        echo -e "${GREEN}Traefik Dashboard: http://${TRAEFIK_IP}/dashboard/${NC}"
+        echo -e "${YELLOW}Grafana LoadBalancer IP not assigned yet.${NC}"
+        echo -e "${GREEN}After running 'minikube tunnel', Grafana will be available at: http://127.0.0.1:3000${NC}"
     fi
+    
+    if [ -n "$PROMETHEUS_IP" ]; then
+        echo -e "${GREEN}Prometheus: http://${PROMETHEUS_IP}:9090${NC}"
+    else
+        echo -e "${YELLOW}Prometheus LoadBalancer IP not assigned yet.${NC}"
+        echo -e "${GREEN}After running 'minikube tunnel', Prometheus will be available at: http://127.0.0.1:9090${NC}"
+    fi
+    
+    if [ -n "$TRAEFIK_IP" ]; then
+        echo -e "${GREEN}Traefik Dashboard: http://${TRAEFIK_IP}:9000/dashboard/${NC}"
+    else
+        echo -e "${YELLOW}Traefik LoadBalancer IP not assigned yet.${NC}"
+        echo -e "${GREEN}After running 'minikube tunnel', Traefik Dashboard will be available at: http://127.0.0.1:9000/dashboard/${NC}"
+    fi
+    
+    echo -e "${GREEN}Or access via Ingress (after running 'minikube tunnel'):${NC}"
+    echo -e "${GREEN}Jenkins: http://jenkins.local/${NC}"
+    echo -e "${GREEN}Grafana: http://grafana.local/${NC}"
+    echo -e "${GREEN}Prometheus: http://prometheus.local/${NC}"
     
     echo -e "${YELLOW}Jenkins Admin Credentials:${NC}"
     echo -e "${YELLOW}Username: admin${NC}"
