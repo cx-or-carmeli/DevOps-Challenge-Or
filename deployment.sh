@@ -2,42 +2,42 @@
 
 set -e
 
-# Colors for output
+# colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
+NC='\033[0m' 
 
-# Check if required tools are installed
+# check if required tools are installed
 check_prerequisites() {
     echo -e "${YELLOW}Checking prerequisites...${NC}"
     
-    # Check minikube
+    # check minikube
     if ! command -v minikube &> /dev/null; then
         echo -e "${YELLOW}Minikube not found. Installing...${NC}"
         brew install minikube || { echo -e "${RED}Failed to install Minikube.${NC}"; exit 1; }
     fi
     
-    # Check kubectl
+    # check kubectl
     if ! command -v kubectl &> /dev/null; then
         echo -e "${YELLOW}kubectl not found. Installing...${NC}"
         brew install kubectl || { echo -e "${RED}Failed to install kubectl.${NC}"; exit 1; }
     fi
 
-    # Check helm
+    # check helm
     if ! command -v helm &> /dev/null; then
         echo -e "${YELLOW}Helm not found. Installing...${NC}"
         brew install helm || { echo -e "${RED}Failed to install Helm.${NC}"; exit 1; }
     fi
 
-    # Check docker
+    # check docker
     if ! command -v docker &> /dev/null; then
         echo -e "${YELLOW}Docker not found. Installing...${NC}"
         brew install --cask docker || { echo -e "${RED}Failed to install Docker.${NC}"; exit 1; }
         echo -e "${YELLOW}Please open Docker Desktop manually after installation.${NC}"
     fi
 
-    # Check terraform
+    # check terraform
     if ! command -v terraform &> /dev/null; then
         echo -e "${YELLOW}Terraform not found. Installing...${NC}"
         brew tap hashicorp/tap
@@ -47,18 +47,18 @@ check_prerequisites() {
     echo -e "${GREEN}✔ All prerequisites are installed.${NC}"
 }
 
-# Start Minikube with increased resources
+# start minikube
 start_minikube() {
     echo -e "${YELLOW}Starting Minikube...${NC}"
     
-    # Check if minikube is already running
+    # check if minikube is already running
     if minikube status | grep -q "Running"; then
         echo -e "${GREEN}Minikube is already running.${NC}"
     else
         echo -e "${YELLOW}Starting Minikube with 4 CPUs, 6GB RAM, and 20GB disk...${NC}"
         minikube start --cpus=4 --memory=6144 --disk-size=20g
         
-        # Enable ingress addon for Traefik
+        # enable ingress addon for Traefik
         echo -e "${YELLOW}Enabling ingress addon...${NC}"
         minikube addons enable ingress
     fi
