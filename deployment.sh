@@ -419,19 +419,25 @@ EOF
     MINIKUBE_IP=$(minikube ip)
     
     echo -e "${YELLOW}Add the following entries to your /etc/hosts file:${NC}"
-    echo -e "${YELLOW}${MINIKUBE_IP} jenkins.local grafana.local prometheus.local${NC}"
+    echo -e "${YELLOW}127.0.0.1 jenkins.local grafana.local prometheus.local${NC}"
+    
+    echo -e "${YELLOW}Then access services at:${NC}"
+    echo -e "${YELLOW}http://jenkins.local:8080${NC}"
+    echo -e "${YELLOW}http://grafana.local:8080${NC}"
+    echo -e "${YELLOW}http://prometheus.local:8080${NC}"
     
     if [ "$EUID" -eq 0 ]; then
         echo -e "${YELLOW}Adding entries to /etc/hosts automatically...${NC}"
         if ! grep -q "jenkins.local" /etc/hosts; then
-            echo "${MINIKUBE_IP} jenkins.local grafana.local prometheus.local" >> /etc/hosts
+            echo "127.0.0.1 jenkins.local grafana.local prometheus.local" >> /etc/hosts
         fi
     else
         echo -e "${RED}Please run the following command manually with sudo:${NC}"
-        echo -e "${RED}sudo sh -c \"echo '${MINIKUBE_IP} jenkins.local grafana.local prometheus.local' >> /etc/hosts\"${NC}"
+        echo -e "${RED}sudo sh -c \"echo '127.0.0.1 jenkins.local grafana.local prometheus.local' >> /etc/hosts\"${NC}"
     fi
     
     echo -e "${GREEN}Ingress routes created successfully.${NC}"
+    echo -e "${YELLOW}IMPORTANT: Make sure to run 'minikube tunnel' in a separate terminal window!${NC}"
 }
 
 # Deploy Grafana using Helm
