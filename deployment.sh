@@ -50,6 +50,7 @@ check_prerequisites() {
 
 # TODO: add step for start docker application for mac
 # TODO: .gitignore for creds
+# TODO: move traefik before other services
 
 # start minikube
 start_minikube() {
@@ -60,7 +61,7 @@ start_minikube() {
         echo -e "${GREEN}Minikube is already running.${NC}"
     else
         echo -e "${YELLOW}Starting Minikube with 4 CPUs, 6GB RAM, and 20GB disk...${NC}"
-        minikube start --cpus=4 --memory=6144 --disk-size=20g
+        minikube start --cpus=4 --memory=6144 --disk-size=20g --driver=docker --ports=80:80
         
         # enable ingress addon for Traefik
         echo -e "${YELLOW}Enabling ingress addon...${NC}"
@@ -317,8 +318,11 @@ deploy_traefik() {
     
     echo -e "${YELLOW}Installing Traefik with non-standard ports...${NC}"
     helm install traefik traefik/traefik \
-      --set ingressClass.enabled=true \
-      --set ingressRoute.dashboard.enabled=true
+      --set ports.web.hostport=80 \
+      --set ports.web.containerPort=8000 \
+      --set ports.web.protocol=TCP \
+      --set service.type=ClusterIP
+
     
     echo -e "${YELLOW}Waiting for Traefik to be ready...${NC}"
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=traefik --timeout=300s || true
