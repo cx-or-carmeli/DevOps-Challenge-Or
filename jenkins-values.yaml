@@ -24,7 +24,7 @@ controller:
     limits:
       cpu: "1"
       memory: "2Gi"
-  serviceType: ClusterIP
+  serviceType: LoadBalancer
   initializeOnce: true
   probes:
     startupProbe:

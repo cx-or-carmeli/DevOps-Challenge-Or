@@ -310,14 +310,14 @@ deploy_traefik() {
     echo -e "${YELLOW}Waiting for CRDs to register...${NC}"
     sleep 10
     
-    echo -e "${YELLOW}Installing Traefik...${NC}"
+    echo -e "${YELLOW}Installing Traefik with non-standard ports...${NC}"
     helm install traefik traefik/traefik \
       --set ingressClass.enabled=true \
       --set ingressRoute.dashboard.enabled=true \
       --set dashboard.enabled=true \
       --set service.type=LoadBalancer \
-      --set ports.web.port=80 \
-      --set ports.websecure.port=443 \
+      --set ports.web.port=8080 \
+      --set ports.websecure.port=8443 \
       --set additionalArguments="{--providers.kubernetesingress.ingressclass=traefik,--providers.kubernetesingress=true}" \
       --set providers.kubernetesIngress.enabled=true \
       --set providers.kubernetesCRD.enabled=true
