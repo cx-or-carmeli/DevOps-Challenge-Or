@@ -21,7 +21,7 @@ A simple script to set up a complete DevOps environment on Minikube with Jenkins
 3. Add hostname entries to your `/etc/hosts` file:
    ```bash
    # The script will show you the exact command to run
-   sudo sh -c "echo '[MINIKUBE_IP] jenkins.local grafana.local prometheus.local' >> /etc/hosts"
+   sudo sh -c "echo '127.0.0.1 jenkins.local grafana.local prometheus.local' >> /etc/hosts"
    ```
 
 4. Start Minikube tunnel in a separate terminal:
