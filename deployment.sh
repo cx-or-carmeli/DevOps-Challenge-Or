@@ -201,7 +201,7 @@ EOF
 
 # deploy jenkins
 deploy_jenkins() {
-    echo -e "${YELLOW}Deploying Jenkins...${NC}"§
+    echo -e "${YELLOW}Deploying Jenkins...${NC}"
     
     # Add jenkins repo if not already added
     helm repo add jenkins https://charts.jenkins.io 2>/dev/null || true
@@ -332,7 +332,7 @@ deploy_traefik() {
 
     
     echo -e "${YELLOW}Waiting for Traefik to be ready...${NC}"
-    kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=traefi k --timeout=300s || true
+    kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=traefik --timeout=300s || true
     
     # echo -e "${YELLOW}Verifying Traefik CRDs...${NC}"
     # if ! kubectl get crd | grep -q ingressroutes.traefik.containo.us; then
