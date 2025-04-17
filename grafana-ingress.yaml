@@ -7,11 +7,8 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`grafana.local`)
-      kind: Rule
+    - kind: Rule
+      match: Host(\`grafana.local\`)
       services:
         - name: grafana
           port: 3000
-  # Enable TLS if needed
-  # tls:
-  #   secretName: grafana-tls-cert
