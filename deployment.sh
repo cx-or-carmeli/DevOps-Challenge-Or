@@ -73,7 +73,7 @@ start_minikube() {
         echo -e "${GREEN}Minikube is already running.${NC}"
     else
         echo -e "${YELLOW}Starting Minikube with 4 CPUs, 6GB RAM, and 20GB disk...${NC}"
-        minikube start --cpus=4 --memory=6144 --disk-size=20g --driver=docker --ports=80:80
+        minikube start --cpus=4 --memory=6144 --disk-size=20g
         
         # enable ingress addon for Traefik
         echo -e "${YELLOW}Enabling ingress addon...${NC}"
