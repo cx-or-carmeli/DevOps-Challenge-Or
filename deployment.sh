@@ -48,9 +48,22 @@ check_prerequisites() {
     echo -e "${GREEN}✔ All prerequisites are installed.${NC}"
 }
 
-# TODO: add step for start docker application for mac
 # TODO: .gitignore for creds
 # TODO: move traefik before other services
+
+# start Docker
+start_docker() {
+  echo "Starting Docker..."
+  open -a Docker
+
+  echo "Waiting for Docker to be ready..."
+  while ! docker system info > /dev/null 2>&1; do
+    sleep 2
+  done
+
+  echo "Docker is running!"
+}
+
 
 # start minikube
 start_minikube() {
@@ -619,6 +632,7 @@ uninstall() {
 
 # Install all components
 install() {
+    start_docker
     check_prerequisites
     start_minikube
     create_secrets
