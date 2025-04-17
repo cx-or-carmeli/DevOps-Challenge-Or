@@ -402,33 +402,6 @@ deploy_grafana() {
         return
     }
     
-    # If main.tf doesn't exist, create it
-    if [ ! -f "main.tf" ]; then
-        echo -e "${YELLOW}Creating Terraform configuration...${NC}"
-        cat <<EOF > main.tf
-terraform {
-  required_providers {
-    grafana = {
-      source  = "grafana/grafana"
-      version = "1.20.0"
-    }
-  }
-}
-
-provider "grafana" {
-  url  = var.grafana_url
-  auth = "admin:admin"
-}
-
-variable "grafana_url" {
-  type        = string
-  description = "Grafana URL"
-}
-
-# Add your Grafana resources here
-EOF
-    fi
-    
     # Initialize Terraform with better error handling
     echo -e "${YELLOW}Initializing Terraform...${NC}"
     terraform init || {
