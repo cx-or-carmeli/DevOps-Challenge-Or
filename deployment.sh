@@ -48,7 +48,6 @@ check_prerequisites() {
     echo -e "${GREEN}✔ All prerequisites are installed.${NC}"
 }
 
-# TODO: .gitignore for creds
 # TODO: move traefik before other services
 
 # start Docker
