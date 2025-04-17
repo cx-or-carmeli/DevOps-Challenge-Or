@@ -7,11 +7,8 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`jenkins.local`)
-      kind: Rule
+    - kind: Rule
+      match: Host(\`jenkins.local\`)
       services:
         - name: jenkins
           port: 8080
-  # Enable TLS if needed
-  # tls:
-  #   secretName: jenkins-tls-cert
