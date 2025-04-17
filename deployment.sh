@@ -53,15 +53,15 @@ check_prerequisites() {
 
 # start Docker
 start_docker() {
-  echo "Starting Docker..."
+    echo -e "${YELLOW}Starting Docker...${NC}"
   open -a Docker
 
-  echo "Waiting for Docker to be ready..."
+  echo "${YELLOW}Waiting for Docker to be ready...${NC}"
   while ! docker system info > /dev/null 2>&1; do
     sleep 2
   done
 
-  echo "Docker is running!"
+  echo "${GREEN}Docker is running!${NC}"
 }
 
 
