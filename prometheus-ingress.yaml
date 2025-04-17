@@ -7,11 +7,8 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`prometheus.local`)
-      kind: Rule
+    - kind: Rule
+      match: Host(\`prometheus.local\`)
       services:
         - name: prometheus-server
           port: 9090
-  # Enable TLS if needed
-  # tls:
-  #   secretName: prometheus-tls-cert
