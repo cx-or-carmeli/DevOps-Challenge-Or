@@ -314,6 +314,7 @@ EOF
 }
 
 # deploy traefik
+# deploy traefik
 deploy_traefik() {
     echo -e "${YELLOW}Deploying Traefik...${NC}"
     
@@ -326,33 +327,32 @@ deploy_traefik() {
     
     helm uninstall traefik 2>/dev/null || true
     
-    # echo -e "${YELLOW}Installing Traefik CRDs...${NC}"
-    # kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml || true
+    echo -e "${YELLOW}Installing Traefik CRDs...${NC}"
+    kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml || true
     
     echo -e "${YELLOW}Installing Traefik ...${NC}"
     helm install traefik traefik/traefik \
       --set ingress.enabled=true
-
     
     echo -e "${YELLOW}Waiting for Traefik to be ready...${NC}"
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=traefik --timeout=300s || true
     
-    # echo -e "${YELLOW}Verifying Traefik CRDs...${NC}"
-    # if ! kubectl get crd | grep -q ingressroutes.traefik.containo.us; then
-    #     echo -e "${RED}Traefik CRDs not found. Installing manually...${NC}"
-    #     TEMP_DIR=$(mktemp -d)
-    #     curl -s https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml > "${TEMP_DIR}/traefik-crds.yml"
-    #     kubectl apply -f "${TEMP_DIR}/traefik-crds.yml"
-    #     echo -e "${YELLOW}Waiting for manually installed CRDs to register...${NC}"
-    #     sleep 15
-    #     rm -rf "${TEMP_DIR}"
-    # fi
+    echo -e "${YELLOW}Verifying Traefik CRDs...${NC}"
+    if ! kubectl get crd | grep -q ingressroutes.traefik.containo.us; then
+        echo -e "${RED}Traefik CRDs not found. Installing manually...${NC}"
+        TEMP_DIR=$(mktemp -d)
+        curl -s https://raw.githubusercontent.com/traefik/traefik/v2.10/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml > "${TEMP_DIR}/traefik-crds.yml"
+        kubectl apply -f "${TEMP_DIR}/traefik-crds.yml"
+        echo -e "${YELLOW}Waiting for manually installed CRDs to register...${NC}"
+        sleep 15
+        rm -rf "${TEMP_DIR}"
+    fi
     
-    # if ! kubectl get crd | grep -q ingressroutes.traefik.containo.us; then
-    #     echo -e "${RED}Warning: Traefik CRDs still not found. IngressRoutes may not work.${NC}"
-    # else
-    #     echo -e "${GREEN}Traefik CRDs verified successfully.${NC}"
-    # fi
+    if ! kubectl get crd | grep -q ingressroutes.traefik.containo.us; then
+        echo -e "${RED}Warning: Traefik CRDs still not found. IngressRoutes may not work.${NC}"
+    else
+        echo -e "${GREEN}Traefik CRDs verified successfully.${NC}"
+    fi
     
     echo -e "${GREEN}Traefik deployed successfully.${NC}"
 }
