@@ -53,15 +53,15 @@ check_prerequisites() {
 
 # start Docker
 start_docker() {
-    echo -e "${YELLOW}Starting Docker...${NC}"
+  echo -e "${YELLOW}Starting Docker...${NC}"
   open -a Docker
 
-  echo "${YELLOW}Waiting for Docker to be ready...${NC}"
+  echo -e "${YELLOW}Waiting for Docker to be ready...${NC}"
   while ! docker system info > /dev/null 2>&1; do
     sleep 2
   done
 
-  echo "${GREEN}Docker is running!${NC}"
+  echo -e "${GREEN}Docker is running!${NC}"
 }
 
 
@@ -110,10 +110,14 @@ create_secrets() {
     echo -e "${YELLOW}PostgreSQL Password: ${POSTGRES_PASSWORD}${NC}"
     echo -e "${YELLOW}Jenkins Admin Password: ${JENKINS_ADMIN_PASSWORD}${NC}"
     
-    # Save credentials to a file
+    # Save credentials to a file with restricted permissions
     echo "PostgreSQL Password: ${POSTGRES_PASSWORD}" > ./credentials.txt
     echo "Jenkins Admin Password: ${JENKINS_ADMIN_PASSWORD}" >> ./credentials.txt
-    echo -e "${GREEN}Credentials saved to ./credentials.txt${NC}"
+    
+    # Set restrictive permissions (only owner can read/write)
+    chmod 600 ./credentials.txt
+    
+    echo -e "${GREEN}Credentials saved to ./credentials.txt with restricted permissions${NC}"
 }
 
 # Deploy PostgreSQL using Helm
