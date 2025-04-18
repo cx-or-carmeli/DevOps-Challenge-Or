@@ -1,3 +1,6 @@
+# Ignore sensitive files
+credentials.txt
+
 # Operating System Files
 .DS_Store
 Thumbs.db
