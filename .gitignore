@@ -1,5 +1,5 @@
 # Ignore sensitive files
-credentials.txt
+credentials/
 
 # Operating System Files
 .DS_Store
