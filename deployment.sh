@@ -127,18 +127,14 @@ deploy_postgres() {
     helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
     helm repo update
     
-    # Deploy PostgreSQL
-    helm upgrade --install postgres bitnami/postgresql \
-        --set global.postgresql.auth.existingSecret=postgres-secret \
-        --set global.postgresql.auth.secretKeys.adminPasswordKey=postgres-password \
-        --set primary.persistence.size=1Gi \
-        --set primary.resources.requests.cpu=100m \
-        --set primary.resources.requests.memory=256Mi \
-        --set primary.resources.limits.cpu=500m \
-        --set primary.resources.limits.memory=512Mi \
-        --set metrics.enabled=true \
-        --set service.type=ClusterIP
-    
+    helm upgrade --install  postgres bitnami/postgresql \
+          --set global.storageClass=standard \
+          --set global.postgresql.auth.username=myuser \
+          --set global.postgresql.auth.password=mypassword \
+          --set global.postgresql.auth.database=mydatabase \
+          --set primary.persistence.size=5Gi \
+          --set volumePermissions.enabled=true
+
     # Wait for PostgreSQL to be ready
     echo -e "${YELLOW}Waiting for PostgreSQL to be ready...${NC}"
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql --timeout=300s
@@ -154,29 +150,29 @@ deploy_prometheus() {
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
     helm repo update
     
-    # Create a ConfigMap for Prometheus scrape config
-    cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-postgres-scrape-config
-data:
-  postgres-scrape.yaml: |-
-    - job_name: 'postgres-metrics'
-      kubernetes_sd_configs:
-        - role: pod
-      relabel_configs:
-        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
-          action: keep
-          regex: postgresql
-        - source_labels: [__meta_kubernetes_pod_container_port_number]
-          action: keep
-          regex: 9187
-        - source_labels: [__meta_kubernetes_namespace]
-          target_label: kubernetes_namespace
-        - source_labels: [__meta_kubernetes_pod_name]
-          target_label: kubernetes_pod_name
-EOF
+#     # Create a ConfigMap for Prometheus scrape config
+#     cat <<EOF | kubectl apply -f -
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: prometheus-postgres-scrape-config
+# data:
+#   postgres-scrape.yaml: |-
+#     - job_name: 'postgres-metrics'
+#       kubernetes_sd_configs:
+#         - role: pod
+#       relabel_configs:
+#         - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+#           action: keep
+#           regex: postgresql
+#         - source_labels: [__meta_kubernetes_pod_container_port_number]
+#           action: keep
+#           regex: 9187
+#         - source_labels: [__meta_kubernetes_namespace]
+#           target_label: kubernetes_namespace
+#         - source_labels: [__meta_kubernetes_pod_name]
+#           target_label: kubernetes_pod_name
+# EOF
     
     # Deploy Prometheus with LoadBalancer service type
     echo -e "${YELLOW}Deploying Prometheus with LoadBalancer service...${NC}"
@@ -186,13 +182,13 @@ EOF
         --set server.global.scrape_interval=15s \
         --set server.global.evaluation_interval=15s \
         --set server.persistentVolume.size=4Gi \
-        --set configmapReload.prometheus.enabled=true \
-        --set server.extraConfigmapMounts[0].name=prometheus-postgres-scrape-config \
-        --set server.extraConfigmapMounts[0].mountPath=/etc/prometheus/postgres-scrape.yaml \
-        --set server.extraConfigmapMounts[0].subPath=postgres-scrape.yaml \
-        --set server.extraConfigmapMounts[0].configMap=prometheus-postgres-scrape-config \
-        --set server.extraConfigmapMounts[0].readOnly=true \
-        --set-string server.additionalScrapeConfigs[0]="\$(cat /etc/prometheus/postgres-scrape.yaml)"
+        # --set configmapReload.prometheus.enabled=true \
+        # --set server.extraConfigmapMounts[0].name=prometheus-postgres-scrape-config \
+        # --set server.extraConfigmapMounts[0].mountPath=/etc/prometheus/postgres-scrape.yaml \
+        # --set server.extraConfigmapMounts[0].subPath=postgres-scrape.yaml \
+        # --set server.extraConfigmapMounts[0].configMap=prometheus-postgres-scrape-config \
+        # --set server.extraConfigmapMounts[0].readOnly=true \
+        # --set-string server.additionalScrapeConfigs[0]="\$(cat /etc/prometheus/postgres-scrape.yaml)"
     
     # Wait for Prometheus to be ready
     echo -e "${YELLOW}Waiting for Prometheus to be ready...${NC}"
@@ -217,86 +213,15 @@ deploy_jenkins() {
     kubectl delete configmap jenkins-casc-config || true
     kubectl delete -f jenkins-config.yaml || true
     
-    # Create a storage class for Jenkins that ensures proper filesystem permissions
-    cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: jenkins-pvc
-  namespace: default
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 4Gi
-EOF
-    
-    # Create a minimal Jenkins values file with non-root configuration
-    cat <<EOF > jenkins-values.yaml
-controller:
-  admin:
-    username: admin
-    existingSecret: jenkins-secret
-    passwordKey: jenkins-admin-password
-    userKey: jenkins-admin-user
-  installPlugins: false
-  additionalPlugins:
-    - kubernetes:4150.v1fa_200642586
-    - workflow-aggregator:596.v8c21c963d92d
-    - git:5.2.1
-  JCasC:
-    enabled: false
-    configScripts: {}
-  # Remove the custom init container and rely on fsGroup instead
-  containerSecurityContext:
-    runAsUser: 1000
-    runAsGroup: 1000
-    allowPrivilegeEscalation: false
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "1Gi"
-    limits:
-      cpu: "1"
-      memory: "2Gi"
-  serviceType: LoadBalancer
-  initializeOnce: true
-  probes:
-    startupProbe:
-      periodSeconds: 10
-      timeoutSeconds: 5
-      failureThreshold: 12
-    livenessProbe:
-      periodSeconds: 20
-      timeoutSeconds: 10
-      failureThreshold: 5
-  numExecutors: 0
-  imagePullPolicy: IfNotPresent
-persistence:
-  existingClaim: jenkins-pvc
-  # Add fsGroup to set permissions properly
-  runAsUser: 1000
-  fsGroup: 1000
-agent:
-  enabled: true
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "512Mi"
-    limits:
-      cpu: "1"
-      memory: "1Gi"
-# Add pod security context to make the pod run as non-root
-podSecurityContextOverride:
-  runAsUser: 1000
-  runAsGroup: 1000
-  fsGroup: 1000
-EOF
-    
     # Deploy Jenkins using the values file
     echo -e "${YELLOW}Deploying Jenkins with non-root configuration...${NC}"
-    helm install jenkins jenkins/jenkins --values jenkins-values.yaml
+    # helm install jenkins jenkins/jenkins --values jenkins-values.yaml
+    helm install jenkins jenkins/jenkins \
+    --set controller.serviceType=LoadBalancer \
+    --set controller.admin.username=admin \
+    --set controller.admin.password=admin123 \
+    --set persistence.enabled=true \
+    --set persistence.size=5Gi
     
     # Wait for Jenkins to be ready
     echo -e "${YELLOW}Waiting for Jenkins to be ready...${NC}"
@@ -365,19 +290,22 @@ deploy_grafana() {
     helm repo update
     
     # Deploy Grafana with LoadBalancer service type
-    echo -e "${YELLOW}Deploying Grafana with LoadBalancer service...${NC}"
-    helm upgrade --install grafana grafana/grafana \
-        --set service.type=LoadBalancer \
-        --set service.port=3000 \
-        --set persistence.enabled=true \
-        --set persistence.size=1Gi \
-        --set adminPassword=admin \
-        --set datasources."datasources\\.yaml".apiVersion=1 \
-        --set datasources."datasources\\.yaml".datasources[0].name=Prometheus \
-        --set datasources."datasources\\.yaml".datasources[0].type=prometheus \
-        --set datasources."datasources\\.yaml".datasources[0].url=http://prometheus-server \
-        --set datasources."datasources\\.yaml".datasources[0].access=proxy \
-        --set datasources."datasources\\.yaml".datasources[0].isDefault=true
+helm upgrade --install grafana grafana/grafana \
+    --set service.type=LoadBalancer \
+    --set service.port=3000 \
+    --set persistence.enabled=true \
+    --set persistence.size=1Gi \
+    --set adminPassword=admin \
+    --set datasources."datasources\.yaml".apiVersion=1 \
+    --set datasources."datasources\.yaml".datasources[0].name=PostgreSQL \
+    --set datasources."datasources\.yaml".datasources[0].type=postgres \
+    --set datasources."datasources\.yaml".datasources[0].url="postgresql://postgres-postgresql:5432" \
+    --set datasources."datasources\.yaml".datasources[0].user="myuser" \
+    --set datasources."datasources\.yaml".datasources[0].database="mydatabase" \
+    --set datasources."datasources\.yaml".datasources[0].access="proxy" \
+    --set datasources."datasources\.yaml".datasources[0].isDefault=true \
+    --set datasources."datasources\.yaml".datasources[0].jsonData.sslmode="disable" \
+    --set datasources."datasources\.yaml".datasources[0].secureJsonData.password="${POSTGRES_PASSWORD}"
     
     # Wait for Grafana to be ready
     echo -e "${YELLOW}Waiting for Grafana to be ready...${NC}"
