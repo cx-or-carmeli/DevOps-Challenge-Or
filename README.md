@@ -1,61 +1,101 @@
-# Minikube DevOps Environment
+# DevOps Challenge – Kubernetes Environment with Jenkins, PostgreSQL, Grafana, and Traefik
 
-A simple script to set up a complete DevOps environment on Minikube with Jenkins, Prometheus, Grafana, PostgreSQL, and Traefik.
+This project sets up a full DevOps stack using Minikube. It includes:
+- Jenkins with dynamic Kubernetes agents
+- PostgreSQL as the database
+- Grafana and Prometheus for monitoring
+- Traefik as the ingress controller
 
-## Requirements
+---
 
+## Prerequisites
+
+Before running this project, make sure you have the following installed:
 - Minikube
 - kubectl
 - Helm
 - Docker
 - Terraform
 
-## Quick Start
+---
 
-1. Clone this repository
-2. Run the setup script:
-   ```bash
-   ./deployment.sh install
-   ```
+## Installation
 
-3. Add hostname entries to your `/etc/hosts` file:
-   ```bash
-   # The script will show you the exact command to run
-   sudo sh -c "echo '127.0.0.1 jenkins.local grafana.local prometheus.local' >> /etc/hosts"
-   ```
+1. Clone the repository:
+```bash
+git clone https://github.com/cx-or-carmeli/DevOps-Challenge-Or.git
+cd DevOps-Challenge-Or
+```
 
-4. Start Minikube tunnel in a separate terminal:
-   ```bash
-   minikube tunnel
-   ```
+2. Run the deployment script:
+```bash
+./deployment.sh install
+```
 
-## Accessing Services
+3. Add the following to your `/etc/hosts` file:
+```
+127.0.0.1 jenkins.local grafana.local prometheus.local
+```
 
-- Jenkins: http://jenkins.local/
-- Grafana: http://grafana.local/
-- Prometheus: http://prometheus.local/
+4. Start `minikube tunnel` in a separate terminal:
+```bash
+minikube tunnel
+```
+
+---
+
+## Accessing the Services
+
+| Service    | URL                   |
+|------------|------------------------|
+| Jenkins    | http://jenkins.local   |
+| Grafana    | http://grafana.local   |
+| Prometheus | http://prometheus.local|
+
+---
 
 ## Credentials
 
-All credentials are saved in `credentials.txt` after installation.
+Stored in `credentials.txt` (for development/testing only):
 
-Default credentials:
-- Jenkins: admin / (generated password)
-- Grafana: admin / admin
-- PostgreSQL: postgres / (generated password)
+| Service     | Username | Password         |
+|-------------|----------|------------------|
+| Jenkins     | admin    | auto-generated   |
+| PostgreSQL  | postgres | auto-generated   |
+| Grafana     | admin    | admin            |
 
-## Uninstall
+---
 
-To remove everything:
+## Uninstallation
+
+To remove all resources:
 ```bash
 ./deployment.sh uninstall
 ```
 
-## Troubleshooting
+---
 
-If Jenkins crashes, try running the install script again with the updated deployment configuration.
+## Architecture Overview
 
-If services aren't accessible, check:
-1. Minikube tunnel is running
-2. Hosts file contains the correct entries
-3. All pods are running: `kubectl get pods`
+This project deploys:
+
+- Jenkins with Kubernetes plugin for dynamic agents
+- PostgreSQL with persistent storage
+- Grafana and Prometheus for dashboards and metrics
+- Traefik as a LoadBalancer Ingress for routing to services
+
+_(You can add a diagram here if needed.)_
+
+---
+
+## Future Improvements
+
+- Add resource limits and probes in manifests
+- Integrate GitHub Actions or Jenkinsfile for CI/CD
+- Improve observability with custom Grafana dashboards
+
+---
+
+## Notes
+
+This project demonstrates infrastructure as code, container orchestration, and observability in a local Kubernetes cluster using Minikube.
