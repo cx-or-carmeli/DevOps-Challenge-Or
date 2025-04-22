@@ -84,8 +84,6 @@ This project deploys:
 - Grafana and Prometheus for dashboards and metrics
 - Traefik as a LoadBalancer Ingress for routing to services
 
-_(You can add a diagram here if needed.)_
-
 ---
 
 ## Future Improvements
