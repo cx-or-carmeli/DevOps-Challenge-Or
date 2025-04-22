@@ -1,6 +1,6 @@
 # DevOps Challenge – Kubernetes Environment with Jenkins, PostgreSQL, Grafana, and Traefik
 
-This project sets up a full DevOps stack using Minikube. It includes:
+This setup provides a full DevOps stack running locally with Minikube. It includes:
 - Jenkins with dynamic Kubernetes agents
 - PostgreSQL as the database
 - Grafana and Prometheus for monitoring
@@ -10,7 +10,7 @@ This project sets up a full DevOps stack using Minikube. It includes:
 
 ## Prerequisites
 
-Before running this project, make sure you have the following installed:
+Before getting started, make sure the following tools are installed:
 - Minikube
 - kubectl
 - Helm
@@ -32,12 +32,12 @@ cd DevOps-Challenge-Or
 ./deployment.sh install
 ```
 
-3. Add the following to your `/etc/hosts` file:
+3. Update your `/etc/hosts` file:
 ```
 127.0.0.1 jenkins.local grafana.local prometheus.local
 ```
 
-4. Start `minikube tunnel` in a separate terminal:
+4. In a separate terminal, run:
 ```bash
 minikube tunnel
 ```
@@ -56,7 +56,7 @@ minikube tunnel
 
 ## Credentials
 
-Stored in `credentials.txt` (for development/testing only):
+Credentials for local development/testing are stored in `credentials.txt`:
 
 | Service     | Username | Password         |
 |-------------|----------|------------------|
@@ -68,7 +68,7 @@ Stored in `credentials.txt` (for development/testing only):
 
 ## Uninstallation
 
-To remove all resources:
+To remove everything:
 ```bash
 ./deployment.sh uninstall
 ```
@@ -78,22 +78,22 @@ To remove all resources:
 ## Architecture Overview
 
 This project deploys:
-
-- Jenkins with Kubernetes plugin for dynamic agents
+- Jenkins with dynamic agents using the Kubernetes plugin
 - PostgreSQL with persistent storage
-- Grafana and Prometheus for dashboards and metrics
-- Traefik as a LoadBalancer Ingress for routing to services
+- Grafana and Prometheus for metrics and dashboards
+- Traefik as a LoadBalancer Ingress to route traffic to services
 
 ---
 
 ## Future Improvements
 
-- Add resource limits and probes in manifests
-- Integrate GitHub Actions or Jenkinsfile for CI/CD
-- Improve observability with custom Grafana dashboards
+- Add resource limits and readiness/liveness probes
+- Integrate with GitHub Actions or use Jenkinsfiles for CI/CD pipelines
+- Extend observability with custom Grafana dashboards
 
 ---
 
 ## Notes
 
-This project demonstrates infrastructure as code, container orchestration, and observability in a local Kubernetes cluster using Minikube.
+This setup shows how to use infrastructure as code, container orchestration, and monitoring within a local Kubernetes cluster using Minikube.
+
