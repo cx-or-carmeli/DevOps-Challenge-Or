@@ -16,9 +16,8 @@ provider "grafana" {
 resource "grafana_data_source" "postgresql" {
   type          = "postgres"
   name          = "PostgreSQL"
-  url           = "postgres-postgresql.db.svc.cluster.local:5432"
+  url           = "postgres-postgresql.default.svc.cluster.local:5432"
   username      = "postgres"
-#   password      = var.postgres_password
   database_name = "postgres"
 
   json_data_encoded = jsonencode({
@@ -38,7 +37,7 @@ resource "null_resource" "wait_for_grafana" {
       attempt=0
       while [ $attempt -lt $max_attempts ]; do
         echo "Attempt $((attempt+1))/$max_attempts: Checking if Grafana is accessible..."
-        if curl -v http://grafana.local:9090/api/health; then
+        if curl -v http://grafana.local:3000/api/health; then
           echo "Grafana is accessible!"
           exit 0
         fi
