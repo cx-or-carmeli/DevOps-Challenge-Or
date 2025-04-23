@@ -491,7 +491,7 @@ uninstall() {
     echo -e "${YELLOW}Uninstalling all components...${NC}"
     
     # Kill any running minikube tunnel
-    pgrep -f "minikube tunnel" | xargs kill -9
+    pkill -f "minikube tunnel" || true
 
     # Kill any port forwarding processes
     pkill -f "kubectl port-forward" || true
