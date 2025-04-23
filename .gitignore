@@ -69,3 +69,4 @@ temp/
 
 # Project-specific
 *.retry
+terraform.tfvars
