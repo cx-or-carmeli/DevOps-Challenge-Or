@@ -8,22 +8,22 @@ terraform {
 }
 
 provider "grafana" {
-  url  = "http://grafana.local:3000"
+  url  = "http://grafana.local"
   auth = var.grafana_auth
 }
 
-# Create PostgreSQL data source
+# Create PostgreSQL data source to match deployment.sh configuration
 resource "grafana_data_source" "postgresql" {
   type          = "postgres"
   name          = "PostgreSQL"
-  url           = "postgres-postgresql.default.svc.cluster.local:5432"
-  username      = "postgres"
-  database_name = "postgres"
+  url = "postgresql://postgres-postgresql:5432"
+  username      = "myuser"
+  database_name = "mydatabase"
+  is_default    = true
+  access_mode   = "proxy"
 
   json_data_encoded = jsonencode({
-    sslmode         = "disable"
-    postgresVersion = 1200
-    timescaledb     = false
+    sslmode = "disable"
   })
   secure_json_data_encoded = jsonencode({
     password = var.postgres_password
@@ -37,7 +37,7 @@ resource "null_resource" "wait_for_grafana" {
       attempt=0
       while [ $attempt -lt $max_attempts ]; do
         echo "Attempt $((attempt+1))/$max_attempts: Checking if Grafana is accessible..."
-        if curl -v http://grafana.local:3000/api/health; then
+        if curl -v http://grafana.localapi/health; then
           echo "Grafana is accessible!"
           exit 0
         fi
@@ -50,7 +50,6 @@ resource "null_resource" "wait_for_grafana" {
     EOT
   }
 }
-
 
 # Create dashboard for PostgreSQL datetime records
 resource "grafana_dashboard" "datetime_records" {

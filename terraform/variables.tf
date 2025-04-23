@@ -7,5 +7,5 @@
   variable "postgres_password" {
     description = "PostgreSQL password"
     type        = string
-    default     = "postgres"
+    default     = "mypassword"
   }
