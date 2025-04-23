@@ -491,8 +491,8 @@ uninstall() {
     echo -e "${YELLOW}Uninstalling all components...${NC}"
     
     # Kill any running minikube tunnel
-    pkill -f "minikube tunnel" || true
-    
+    pgrep -f "minikube tunnel" | xargs kill -9
+
     # Kill any port forwarding processes
     pkill -f "kubectl port-forward" || true
     
@@ -500,7 +500,7 @@ uninstall() {
     echo -e "${YELLOW}Removing ingress routes...${NC}"
     kubectl delete -f jenkins-ingress.yaml || true
     kubectl delete -f grafana-ingress.yaml || true
-    kubectl delete -f prometheus-ingress.yaml || true
+    kubectl delete -f pßrometheus-ingress.yaml || true
     
     kubectl delete ingressroute --all || true
     kubectl delete middleware --all || true
