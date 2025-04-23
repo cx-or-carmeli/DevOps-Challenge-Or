@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "grafana" {
-  url  = "http://grafana.local"
+  url  = "http://grafana.local:3000"
   auth = var.grafana_auth
 }
 
@@ -16,7 +16,7 @@ provider "grafana" {
 resource "grafana_data_source" "postgresql" {
   type          = "postgres"
   name          = "PostgreSQL"
-  url = "postgresql://postgres-postgresql:5432"
+  url           = "postgres-postgresql.default.svc.cluster.local:5432"  
   username      = "myuser"
   database_name = "mydatabase"
   is_default    = true
@@ -37,7 +37,7 @@ resource "null_resource" "wait_for_grafana" {
       attempt=0
       while [ $attempt -lt $max_attempts ]; do
         echo "Attempt $((attempt+1))/$max_attempts: Checking if Grafana is accessible..."
-        if curl -v http://grafana.localapi/health; then
+        if curl -v http://grafana.local/api/health; then
           echo "Grafana is accessible!"
           exit 0
         fi
