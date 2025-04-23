@@ -87,6 +87,13 @@ start_minikube() {
     echo -e "${GREEN}Minikube is ready.${NC}"
 }
 
+# Prompt user to start minikube tunnel
+prompt_minikube_tunnel() {
+    echo -e "${YELLOW}Please start 'minikube tunnel' in a separate terminal and press Enter when done...${NC}"
+    read -r
+    echo -e "${GREEN}Continuing with the script...${NC}"
+}
+
 # Create Kubernetes secrets
 create_secrets() {
     echo -e "${YELLOW}Creating Kubernetes secrets...${NC}"
@@ -538,6 +545,7 @@ install() {
     start_docker
     check_prerequisites
     start_minikube
+    prompt_minikube_tunnel
     create_secrets
     deploy_postgres
     deploy_jenkins
