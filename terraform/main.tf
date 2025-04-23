@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "grafana" {
-  url  = "http://grafana.local:3000"
+  url  = "http://grafana.local"
   auth = var.grafana_auth
 }
 
