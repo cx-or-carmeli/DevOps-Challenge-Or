@@ -70,3 +70,4 @@ temp/
 # Project-specific
 *.retry
 terraform.tfvars
+logs.txt
