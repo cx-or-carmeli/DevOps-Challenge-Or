@@ -1,109 +1,48 @@
+pipelineJob('db-update-job') {
+  definition {
+    cps {
+      script('''
+        pipeline {
+          agent {
+            kubernetes {
+              yaml """
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: jenkins-job-dsl
-data:
-  job-dsl.groovy: |
-    pipelineJob('db-timestamp-job') {
-      description('Launches a Kubernetes worker pod and inserts a timestamp into PostgreSQL every 5 minutes')
-
-      triggers {
-        cron('H/5 * * * *') // Every 5 minutes
-      }
-
-      definition {
-        cps {
-          script("""
-            pipeline {
-              agent none
-              stages {
-                stage('Launch Worker Pod') {
-                  agent {
-                    kubernetes {
-                      yaml '''
-                      apiVersion: v1
-                      kind: Pod
-                      metadata:
-                        name: jenkins-worker
-                      spec:
-                        containers:
-                          - name: worker
-                            image: bitnami/postgresql:latest
-                            command: ["/bin/sh", "-c"]
-                            args: ["sleep 60"]
-                            env:
-                              - name: POSTGRES_HOST
-                                value: "postgres-postgresql.default.svc.cluster.local"
-                              - name: POSTGRES_USER
-                                value: "admin"
-                              - name: POSTGRES_PASSWORD
-                                value: "securepassword"
-                              - name: POSTGRES_DB
-                                value: "mydatabase"
-                      '''
-                    }
-                  }
-                  steps {
-                    script {
-                      echo 'Worker pod launched successfully'
-                    }
-                  }
-                }
-
-                stage('Insert Timestamp into PostgreSQL') {
-                  agent {
-                    kubernetes {
-                      yaml '''
-                      apiVersion: v1
-                      kind: Pod
-                      metadata:
-                        name: db-worker
-                      spec:
-                        containers:
-                          - name: db-client
-                            image: bitnami/postgresql:latest
-                            command:
-                              - "/bin/sh"
-                              - "-c"
-                              - |
-                                CURRENT_TIME=$(date '+%Y-%m-%d %H:%M:%S')
-                                echo "Inserting timestamp: $CURRENT_TIME"
-                                PGPASSWORD="securepassword" psql -h "postgres-postgresql.default.svc.cluster.local" -U "admin" -d "mydatabase" -c "
-                                  CREATE TABLE IF NOT EXISTS timestamps (
-                                    id SERIAL PRIMARY KEY,
-                                    recorded_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                                    pod_name TEXT,
-                                    node_name TEXT
-                                  );
-                                  INSERT INTO timestamps (recorded_at, pod_name, node_name) 
-                                  VALUES (NOW(), '$HOSTNAME', '${NODE_NAME}');
-                                "
-                            env:
-                              - name: POSTGRES_HOST
-                                value: "postgres-postgresql.default.svc.cluster.local"
-                              - name: POSTGRES_USER
-                                value: "admin"
-                              - name: POSTGRES_PASSWORD
-                                value: "securepassword"
-                              - name: POSTGRES_DB
-                                value: "mydatabase"
-                              - name: NODE_NAME
-                                valueFrom:
-                                  fieldRef:
-                                    fieldPath: spec.nodeName
-                      '''
-                    }
-                  }
-                  steps {
-                    script {
-                      echo 'Inserted timestamp into PostgreSQL successfully'
-                    }
-                  }
+kind: Pod
+spec:
+  containers:
+    - name: postgres-client
+      image: postgres:latest
+      command:
+        - cat
+      tty: true
+              """
+            }
+          }
+          triggers {
+            cron('*/5 * * * *')
+          }
+          stages {
+            stage('Update Database') {
+              steps {
+                container('postgres-client') {
+                  sh '''
+                    echo "Testing connection..."
+                    PGPASSWORD=postgrespass psql -h postgres-postgresql -U postgres -d postgresdb -c "SELECT 1 as test;"
+                    
+                    echo "Creating table if not exists..."
+                    PGPASSWORD=postgrespass psql -h postgres-postgresql -U postgres -d postgresdb -c "CREATE TABLE IF NOT EXISTS timestamps (time TIMESTAMP);"
+                    
+                    echo "Inserting current timestamp..."
+                    PGPASSWORD=postgrespass psql -h postgres-postgresql -U postgres -d postgresdb -c "INSERT INTO timestamps VALUES (NOW());"
+                    
+                    echo "Database operation completed"
+                  '''
                 }
               }
             }
-          """)
-          sandbox()
+          }
         }
-      }
+      ''')
     }
+  }
+}
