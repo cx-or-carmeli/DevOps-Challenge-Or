@@ -89,9 +89,9 @@ start_minikube() {
 
 # Prompt user to start minikube tunnel
 prompt_minikube_tunnel() {
-    echo -e "${YELLOW}Please start 'minikube tunnel' in a separate terminal and press Enter when done...${NC}"
+    echo -e "${RED}Please start 'minikube tunnel' in a separate terminal and press Enter when done...${NC}"
     read -r
-    echo -e "${GREEN}Continuing with the script...${NC}"
+    echo -e "${GREEN}Continuing with the script...${NC}"ß
 }
 
 # Create Kubernetes secrets
@@ -306,13 +306,13 @@ helm upgrade --install grafana grafana/grafana \
     --set datasources."datasources\.yaml".apiVersion=1 \
     --set datasources."datasources\.yaml".datasources[0].name=PostgreSQL \
     --set datasources."datasources\.yaml".datasources[0].type=postgres \
-    --set datasources."datasources\.yaml".datasources[0].url="postgresql://postgres-postgresql:5432" \
+    --set datasources."datasources\.yaml".datasources[0].url="http://grafna.local:3000" \
     --set datasources."datasources\.yaml".datasources[0].user="myuser" \
     --set datasources."datasources\.yaml".datasources[0].database="mydatabase" \
     --set datasources."datasources\.yaml".datasources[0].access="proxy" \
     --set datasources."datasources\.yaml".datasources[0].isDefault=true \
     --set datasources."datasources\.yaml".datasources[0].jsonData.sslmode="disable" \
-    --set datasources."datasources\.yaml".datasources[0].secureJsonData.password="${POSTGRES_PASSWORD}"
+    --set datasources."datasources\.yaml".datasources[0].secureJsonData.password="mypassword"
     
     # Wait for Grafana to be ready
     echo -e "${YELLOW}Waiting for Grafana to be ready...${NC}"
