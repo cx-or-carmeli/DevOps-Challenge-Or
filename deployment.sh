@@ -306,7 +306,7 @@ helm upgrade --install grafana grafana/grafana \
     --set datasources."datasources\.yaml".apiVersion=1 \
     --set datasources."datasources\.yaml".datasources[0].name=PostgreSQL \
     --set datasources."datasources\.yaml".datasources[0].type=postgres \
-    --set datasources."datasources\.yaml".datasources[0].url="http://grafna.local:3000" \
+    --set datasources."datasources\.yaml".datasources[0].url="postgres-postgresql.database.svc.cluster.local:5432" \
     --set datasources."datasources\.yaml".datasources[0].user="myuser" \
     --set datasources."datasources\.yaml".datasources[0].database="mydatabase" \
     --set datasources."datasources\.yaml".datasources[0].access="proxy" \
